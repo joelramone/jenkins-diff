@@ -1,10 +1,22 @@
-parallelGroups:
-  lower:
-    - dev
-    - testing
-    - laboratorio
-  upper:
-    - qa
-    - homo
-  production:
-    - prod
+# Grupos de despliegue por entorno.
+# Se concatena con environments.yaml para decidir destino por contexto,
+# y con pipeline.yaml para activarse en la etapa deploy.
+
+deployment_groups:
+  # Grupo de servicios internos para desarrollo.
+  - environment: dev
+    targets:
+      - dev-app-01
+      - dev-app-02
+
+  # Grupo canario para validar cambios en staging.
+  - environment: staging
+    targets:
+      - stg-app-canary-01
+
+  # Grupo de producción con alta disponibilidad.
+  - environment: prod
+    targets:
+      - prod-app-01
+      - prod-app-02
+      - prod-app-03
