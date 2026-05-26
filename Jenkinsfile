@@ -1,35 +1,8 @@
-@Library('nrtc-shared-library@main') _
+// Archivo orquestador principal de Jenkins.
+// Se conecta con vars/nrtcEnterprisePipeline.groovy para ejecutar la lógica compartida.
+// También consume pipeline-config/pipeline.yaml y pipeline-config/environments.yaml
+// para definir etapas y comportamiento por entorno.
 
-pipeline {
-  agent any
+@Library("nrtc-shared-library") _
 
-  options {
-    timestamps()
-    disableConcurrentBuilds()
-    ansiColor('xterm')
-  }
-
-  parameters {
-    string(name: 'RELEASE_VERSION', defaultValue: '', description: 'Release version')
-    booleanParam(name: 'DRY_RUN', defaultValue: false, description: 'Dry run')
-  }
-
-  stages {
-    stage('Enterprise Pipeline') {
-      steps {
-        script {
-          nrtcEnterprisePipeline(
-            releaseVersion: params.RELEASE_VERSION,
-            dryRun: params.DRY_RUN
-          )
-        }
-      }
-    }
-  }
-
-  post {
-    always {
-      cleanWs(deleteDirs: true)
-    }
-  }
-}
+nrtcEnterprisePipeline("pipeline-config/pipeline.yaml", "pipeline-config/environments.yaml")

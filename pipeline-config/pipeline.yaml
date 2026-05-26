@@ -1,14 +1,21 @@
-global:
-  aws:
-    region: us-east-1
-  git:
-    userName: jenkins-bot
-    userEmail: jenkins-bot@company.com
-  releases:
-    branchRegex: '^nrtc-[0-9]+\.[0-9]+\.[0-9]+$'
-  s3:
-    sourceUri: s3://nrtc-releases/latest
-  defaults:
-    retries: 1
-    timeout: 20
-    failFast: false
+# Configuración principal del pipeline.
+# Este archivo es referenciado por Jenkinsfile a través de vars/nrtcEnterprisePipeline.groovy.
+# Se concatena conceptualmente con environments.yaml y deployment-groups.yaml para resolver
+# cómo, dónde y para qué grupos se despliega.
+
+# Define el identificador lógico del pipeline para trazabilidad.
+pipeline_name: nrtc-enterprise
+
+# Lista de etapas estándar que la librería compartida puede interpretar.
+stages:
+  # Build prepara artefactos a desplegar.
+  - name: build
+    enabled: true
+
+  # Test ejecuta validaciones automáticas del artefacto.
+  - name: test
+    enabled: true
+
+  # Deploy publica en los entornos definidos en environments.yaml.
+  - name: deploy
+    enabled: true
