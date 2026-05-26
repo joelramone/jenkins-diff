@@ -1,0 +1,10 @@
+parallelGroups:
+  lower:
+    - dev
+    - testing
+    - laboratorio
+  upper:
+    - qa
+    - homo
+  production:
+    - prod

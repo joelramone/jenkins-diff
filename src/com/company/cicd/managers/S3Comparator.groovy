@@ -5,16 +5,12 @@ class S3Comparator implements Serializable {
 
   S3Comparator(def steps) { this.steps = steps }
 
-  void syncFromS3(String sourceUri) {
+  void syncFromS3(String sourceUri, String awsRegion) {
     steps.sh 'mkdir -p .s3-sync'
-    steps.sh "aws s3 sync ${sourceUri} .s3-sync"
+    steps.sh "AWS_DEFAULT_REGION=${awsRegion} aws s3 sync ${sourceUri} .s3-sync --delete"
   }
 
   void copyToWorkspace() {
-    steps.sh 'rsync -av --checksum --delete .s3-sync/ ./'
-  }
-
-  String checksumDelta() {
-    steps.sh(script: "git diff --name-only", returnStdout: true).trim()
+    steps.sh 'rsync -a --checksum --delete --exclude .git --exclude .s3-sync .s3-sync/ ./'
   }
 }

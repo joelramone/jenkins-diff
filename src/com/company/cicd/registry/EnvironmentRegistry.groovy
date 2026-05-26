@@ -1,41 +1,46 @@
 package com.company.cicd.registry
 
+import com.company.cicd.config.PipelineConfiguration
 import com.company.cicd.enums.DeploymentType
-import com.company.cicd.enums.EnvironmentType
 import com.company.cicd.types.EnvironmentConfig
 
 class EnvironmentRegistry implements Serializable {
-  private final Map<EnvironmentType, EnvironmentConfig> environments
-  private final Map<String, List<EnvironmentType>> deploymentGroups
-  private final Map<String, List<EnvironmentType>> parallelGroups
+  private final Map<String, EnvironmentConfig> environments = [:]
+  private final Map<String, List<String>> parallelGroups = [:]
 
-  EnvironmentRegistry() {
-    this.environments = [
-      (EnvironmentType.DEV): create(EnvironmentType.DEV, DeploymentType.SINGLE_SITE, 'lower', false, 15, 1, false, false),
-      (EnvironmentType.TESTING): create(EnvironmentType.TESTING, DeploymentType.SINGLE_SITE, 'lower', true, 20, 2, false, false),
-      (EnvironmentType.LABORATORIO): create(EnvironmentType.LABORATORIO, DeploymentType.SINGLE_SITE, 'lower', true, 20, 1, false, false),
-      (EnvironmentType.QA): create(EnvironmentType.QA, DeploymentType.MULTI_SITE, 'upper', true, 30, 2, false, false),
-      (EnvironmentType.HOMO): create(EnvironmentType.HOMO, DeploymentType.MULTI_SITE, 'upper', true, 30, 1, false, false),
-      (EnvironmentType.PROD): create(EnvironmentType.PROD, DeploymentType.MULTI_SITE, 'production', true, 60, 1, true, true)
-    ]
+  EnvironmentRegistry(def steps, PipelineConfiguration configuration) {
+    Map environmentsYaml = steps.readYaml(file: 'pipeline-config/environments.yaml') ?: [:]
+    Map groupsYaml = steps.readYaml(file: 'pipeline-config/deployment-groups.yaml') ?: [:]
 
-    this.deploymentGroups = [
-      multisite: [EnvironmentType.PROD, EnvironmentType.HOMO, EnvironmentType.QA],
-      singlesite: [EnvironmentType.TESTING, EnvironmentType.LABORATORIO, EnvironmentType.DEV]
-    ]
+    Map<String, Map> envData = (Map<String, Map>) (environmentsYaml.environments ?: [:])
+    envData.each { String name, Map data ->
+      environments[name] = new EnvironmentConfig(
+        name: name,
+        deploymentType: resolveDeploymentType(data.topology?.toString()),
+        parallelGroup: (data.parallelGroup ?: '') as String,
+        approvalRequired: (data.approval ?: false) as boolean,
+        timeoutMinutes: (data.timeout ?: configuration.defaultTimeout) as int,
+        retries: (data.retries ?: configuration.defaultRetries) as int,
+        sequential: (data.sequential ?: false) as boolean,
+        failFast: (data.failFast ?: configuration.globalFailFast) as boolean
+      )
+    }
 
-    this.parallelGroups = [
-      lower: [EnvironmentType.DEV, EnvironmentType.TESTING, EnvironmentType.LABORATORIO],
-      upper: [EnvironmentType.QA, EnvironmentType.HOMO]
-    ]
+    Map<String, List> groups = (Map<String, List>) (groupsYaml.parallelGroups ?: [:])
+    groups.each { String groupName, List groupEnvs ->
+      parallelGroups[groupName] = groupEnvs.collect { it.toString() }
+    }
   }
 
-  private static EnvironmentConfig create(EnvironmentType env, DeploymentType type, String group, boolean approval, int timeout, int retries, boolean sequential, boolean failFast) {
-    new EnvironmentConfig(environment: env, deploymentType: type, parallelGroup: group, approvalRequired: approval, timeoutMinutes: timeout, retries: retries, sequential: sequential, failFast: failFast)
+  private static DeploymentType resolveDeploymentType(String topology) {
+    topology == 'multi-site' ? DeploymentType.MULTI_SITE : DeploymentType.SINGLE_SITE
   }
 
-  EnvironmentConfig get(EnvironmentType env) { environments[env] }
-  List<EnvironmentConfig> lowerGroup() { parallelGroups.lower.collect { environments[it] } }
-  List<EnvironmentConfig> upperGroup() { parallelGroups.upper.collect { environments[it] } }
-  EnvironmentConfig production() { environments[EnvironmentType.PROD] }
+  List<EnvironmentConfig> byGroup(String groupName) {
+    (parallelGroups[groupName] ?: []).collect { environments[it] }.findAll { it != null }
+  }
+
+  EnvironmentConfig production() {
+    byGroup('production').first()
+  }
 }

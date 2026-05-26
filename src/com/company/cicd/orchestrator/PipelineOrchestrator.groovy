@@ -13,6 +13,7 @@ import com.company.cicd.managers.GitManager
 import com.company.cicd.managers.NotificationManager
 import com.company.cicd.managers.S3Comparator
 import com.company.cicd.registry.EnvironmentRegistry
+import com.company.cicd.types.EnvironmentConfig
 
 class PipelineOrchestrator implements Serializable {
   private final def steps
@@ -29,7 +30,7 @@ class PipelineOrchestrator implements Serializable {
   PipelineOrchestrator(def steps, PipelineConfiguration configuration) {
     this.steps = steps
     this.configuration = configuration
-    this.environmentRegistry = new EnvironmentRegistry()
+    this.environmentRegistry = new EnvironmentRegistry(steps, configuration)
     this.gitManager = new GitManager(steps)
     this.branchManager = new BranchManager(steps)
     this.s3Comparator = new S3Comparator(steps)
@@ -42,7 +43,7 @@ class PipelineOrchestrator implements Serializable {
   void execute() {
     steps.stage('Sync S3 and Detect Changes') {
       gitManager.configureIdentity(configuration.gitUserName, configuration.gitUserEmail)
-      s3Comparator.syncFromS3(configuration.s3SourceUri)
+      s3Comparator.syncFromS3(configuration.s3SourceUri, configuration.awsRegion)
       s3Comparator.copyToWorkspace()
       String releaseBranch = resolveReleaseBranch()
       boolean existsRemote = branchManager.remoteBranchExists(releaseBranch)
@@ -50,7 +51,7 @@ class PipelineOrchestrator implements Serializable {
 
       if (gitManager.hasChanges()) {
         String diff = gitManager.diffSummary()
-        gitManager.commit("chore(release): sync artifacts for ${releaseBranch}")
+        gitManager.commitTrackedChanges("chore(release): sync artifacts for ${releaseBranch}")
         if (!configuration.dryRun) {
           gitManager.push(releaseBranch)
         }
@@ -75,15 +76,15 @@ class PipelineOrchestrator implements Serializable {
     ParallelDeploymentBuilder builder = new ParallelDeploymentBuilder(steps, deploymentManager, approvalManager, configuration)
 
     steps.stage('Deploy Lower Environments') {
-      steps.parallel(builder.build(environmentRegistry.lowerGroup() + []), failFast: configuration.globalFailFast)
+      steps.parallel(builder.build(environmentRegistry.byGroup('lower')), failFast: configuration.globalFailFast)
     }
 
     steps.stage('Deploy Upper Environments') {
-      steps.parallel(builder.build(environmentRegistry.upperGroup() + []), failFast: configuration.globalFailFast)
+      steps.parallel(builder.build(environmentRegistry.byGroup('upper')), failFast: configuration.globalFailFast)
     }
 
     steps.stage('Deploy Production') {
-      def prod = environmentRegistry.production()
+      EnvironmentConfig prod = environmentRegistry.production()
       steps.timeout(time: prod.timeoutMinutes, unit: 'MINUTES') {
         steps.retry(prod.retries) {
           approvalManager.approveIfRequired(prod)

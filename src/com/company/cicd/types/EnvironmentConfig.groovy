@@ -1,10 +1,9 @@
 package com.company.cicd.types
 
 import com.company.cicd.enums.DeploymentType
-import com.company.cicd.enums.EnvironmentType
 
 class EnvironmentConfig implements Serializable {
-  EnvironmentType environment
+  String name
   DeploymentType deploymentType
   String parallelGroup
   boolean approvalRequired
@@ -14,6 +13,6 @@ class EnvironmentConfig implements Serializable {
   boolean failFast
 
   String stageName() {
-    environment.name().toLowerCase()
+    name
   }
 }
