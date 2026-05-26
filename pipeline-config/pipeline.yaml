@@ -1,0 +1,14 @@
+global:
+  aws:
+    region: us-east-1
+  git:
+    userName: jenkins-bot
+    userEmail: jenkins-bot@company.com
+  releases:
+    branchRegex: '^nrtc-[0-9]+\.[0-9]+\.[0-9]+$'
+  s3:
+    sourceUri: s3://nrtc-releases/latest
+  defaults:
+    retries: 1
+    timeout: 20
+    failFast: false

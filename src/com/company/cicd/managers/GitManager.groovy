@@ -12,14 +12,14 @@ class GitManager implements Serializable {
 
   boolean hasChanges() {
     String status = steps.sh(script: 'git status --porcelain', returnStdout: true).trim()
-    return !status.isEmpty()
+    !status.isEmpty()
   }
 
   String diffSummary() {
     steps.sh(script: 'git diff --stat', returnStdout: true).trim()
   }
 
-  void commit(String message) {
+  void commitTrackedChanges(String message) {
     steps.sh 'git add -A'
     steps.sh "git commit -m '${message}'"
   }

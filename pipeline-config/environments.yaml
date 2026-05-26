@@ -1,0 +1,35 @@
+environments:
+  dev:
+    topology: single-site
+    parallelGroup: lower
+    approval: false
+    timeout: 15
+    retries: 1
+  testing:
+    topology: single-site
+    parallelGroup: lower
+    approval: true
+    timeout: 20
+    retries: 2
+  laboratorio:
+    topology: single-site
+    parallelGroup: lower
+    approval: true
+  qa:
+    topology: multi-site
+    parallelGroup: upper
+    approval: true
+    timeout: 30
+    retries: 2
+  homo:
+    topology: multi-site
+    parallelGroup: upper
+    approval: true
+  prod:
+    topology: multi-site
+    parallelGroup: production
+    approval: true
+    sequential: true
+    timeout: 60
+    retries: 1
+    failFast: true
